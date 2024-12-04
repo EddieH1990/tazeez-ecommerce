@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { auth, db } from '../firebase';
 import { toast } from 'react-hot-toast';
 import { Store, User, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';

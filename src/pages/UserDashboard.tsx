@@ -3,8 +3,12 @@ import { motion } from 'framer-motion';
 import { Package, User, Heart, Settings, Users } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { Navigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { doc, getDoc, getFirestore } from 'firebase/firestore';
+import { initializeApp } from 'firebase/app';
+import { firebaseConfig } from '../lib/firebase';
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 interface UserProfile {
   name: string;
