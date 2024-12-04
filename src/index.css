@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  body {
+    direction: rtl;
+  }
+}
+
+/* Custom styles */
+.font-arabic {
+  font-family: 'Tajawal', sans-serif;
+}
