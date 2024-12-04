@@ -3,15 +3,13 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyC4-GC5zj85uFqZ-Ywvze0rF01l8HJZNIM",
-  authDomain: "tazeez-73b4f.firebaseapp.com",
-  projectId: "tazeez-73b4f",
-  storageBucket: "tazeez-73b4f.firebasestorage.app",
-  messagingSenderId: "802614142359",
-  appId: "1:802614142359:web:34139a82818e3fc18210d2"
-};
+// Get Firebase config from environment variable
+const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG || '{}');
+
+console.log('Firebase Config:', {
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId
+});
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
