@@ -45,40 +45,25 @@ const Signup = () => {
 
   const onSubmit = async (data: FormData) => {
     try {
-      console.log('Starting signup process with data:', {
-        email: data.email,
-        name: data.name,
-        phone: data.phone,
-        userType: data.userType
-      });
-
-      if (!data.email || !data.password) {
-        console.error('Missing email or password');
-        toast.error('يرجى إدخال البريد الإلكتروني وكلمة المرور');
+      console.log('Starting signup process...');
+      
+      if (!auth) {
+        console.error('Firebase auth not initialized');
+        toast.error('خطأ في النظام، يرجى المحاولة مرة أخرى لاحقاً');
         return;
       }
 
-      // Log Firebase auth state
-      const currentUser = auth.currentUser;
-      console.log('Current auth state:', { 
-        isInitialized: auth.currentUser !== undefined,
-        currentUser: currentUser ? currentUser.uid : 'none'
-      });
-
-      console.log('Attempting to create user with Firebase Auth...');
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
-        .catch(error => {
-          console.error('Firebase Auth Error:', {
-            code: error.code,
-            message: error.message,
-            fullError: error
-          });
-          throw error; // Re-throw to be caught by outer catch
-        });
+      console.log('Attempting to create user:', data.email);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      
+      if (!userCredential || !userCredential.user) {
+        console.error('Failed to create user - no user credential returned');
+        toast.error('فشل في إنشاء الحساب');
+        return;
+      }
 
       console.log('User created successfully:', userCredential.user.uid);
 
-      // Create user profile in Firestore
       try {
         const userProfile = {
           name: data.name,
@@ -93,56 +78,35 @@ const Signup = () => {
           }),
           createdAt: new Date().toISOString(),
         };
-        
-        console.log('Creating user profile in Firestore:', userProfile);
+
         await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
         console.log('User profile created in Firestore');
-      } catch (firestoreError) {
-        console.error('Firestore Error:', {
-          code: firestoreError.code,
-          message: firestoreError.message,
-          fullError: firestoreError
-        });
-        // Continue with navigation even if Firestore fails
+        
+        setUser(userCredential.user);
+        toast.success('تم إنشاء الحساب بنجاح');
+        navigate('/dashboard', { replace: true });
+      } catch (firestoreError: any) {
+        console.error('Firestore Error:', firestoreError);
+        // Even if Firestore fails, the user is created, so we can continue
+        setUser(userCredential.user);
+        toast.success('تم إنشاء الحساب بنجاح');
+        navigate('/dashboard', { replace: true });
       }
-
-      // Set the user in the auth store
-      setUser(userCredential.user);
-      
-      toast.success('تم إنشاء الحساب بنجاح');
-      console.log('Navigating to dashboard...');
-      navigate('/dashboard', { replace: true });
     } catch (error: any) {
-      console.error('Signup Error:', {
-        code: error.code,
-        message: error.message,
-        fullError: error
-      });
+      console.error('Signup Error:', error);
       
       let errorMessage = 'حدث خطأ، يرجى المحاولة مرة أخرى';
-
-      // Handle specific Firebase Auth errors
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'البريد الإلكتروني مستخدم بالفعل';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'البريد الإلكتروني غير صالح';
-          break;
-        case 'auth/operation-not-allowed':
-          errorMessage = 'تسجيل المستخدمين غير مفعل حالياً';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'كلمة المرور ضعيفة جداً';
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = 'فشل الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'تم تجاوز عدد المحاولات المسموح بها، يرجى المحاولة لاحقاً';
-          break;
-        default:
-          errorMessage = `خطأ: ${error.message}`;
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'البريد الإلكتروني مستخدم بالفعل';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'البريد الإلكتروني غير صالح';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'تسجيل المستخدمين غير مفعل حالياً';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'كلمة المرور ضعيفة جداً';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'فشل الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت';
       }
 
       toast.error(errorMessage);

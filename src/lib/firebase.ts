@@ -1,22 +1,20 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { firebaseConfig } from '../config/firebase.config';
 
-// Debug: Log Firebase config (without exposing full API key)
-console.log('Firebase Config Check:', {
-  apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.slice(0, 5)}...` : 'missing',
-  authDomain: firebaseConfig.authDomain || 'missing',
-  projectId: firebaseConfig.projectId || 'missing'
-});
+const firebaseConfig = {
+  apiKey: "AIzaSyC4-GC5zj85uFqZ-Ywvze0rF01l8HJZNIM",
+  authDomain: "tazeez-73b4f.firebaseapp.com",
+  projectId: "tazeez-73b4f",
+  storageBucket: "tazeez-73b4f.firebasestorage.app",
+  messagingSenderId: "802614142359",
+  appId: "1:802614142359:web:34139a82818e3fc18210d2"
+};
 
-if (!firebaseConfig.apiKey) {
-  console.error('Firebase API Key is missing! Check your environment variables.');
-}
-
-console.log('Initializing Firebase with config:', {
+console.log('Firebase Config:', {
   authDomain: firebaseConfig.authDomain,
-  projectId: firebaseConfig.projectId
+  projectId: firebaseConfig.projectId,
+  apiKeyLength: firebaseConfig.apiKey?.length || 0
 });
 
 // Initialize Firebase
@@ -24,10 +22,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('Firebase initialized:', {
-  isAuthInitialized: auth !== null,
-  isDbInitialized: db !== null
-});
+console.log('Firebase initialized successfully');
 
-export const auth = auth;
-export const db = db;
+export { auth, db };
