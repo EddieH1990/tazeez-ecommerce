@@ -45,28 +45,42 @@ const Signup = () => {
 
   const onSubmit = async (data: FormData) => {
     try {
-      console.log('Form data:', data);
-      console.log('Firebase config:', {
-        apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.slice(0, 5) + '...',
-        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      console.log('Starting signup process with data:', {
+        email: data.email,
+        name: data.name,
+        phone: data.phone,
+        userType: data.userType
       });
-      
+
       if (!data.email || !data.password) {
         console.error('Missing email or password');
         toast.error('يرجى إدخال البريد الإلكتروني وكلمة المرور');
         return;
       }
 
-      console.log('Starting signup process...');
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
+      // Log Firebase auth state
+      const currentUser = auth.currentUser;
+      console.log('Current auth state:', { 
+        isInitialized: auth.currentUser !== undefined,
+        currentUser: currentUser ? currentUser.uid : 'none'
+      });
 
-      console.log('User created in Firebase Auth:', user.uid);
+      console.log('Attempting to create user with Firebase Auth...');
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
+        .catch(error => {
+          console.error('Firebase Auth Error:', {
+            code: error.code,
+            message: error.message,
+            fullError: error
+          });
+          throw error; // Re-throw to be caught by outer catch
+        });
+
+      console.log('User created successfully:', userCredential.user.uid);
 
       // Create user profile in Firestore
       try {
-        await setDoc(doc(db, 'users', user.uid), {
+        const userProfile = {
           name: data.name,
           email: data.email,
           phone: data.phone,
@@ -78,23 +92,32 @@ const Signup = () => {
             verified: false,
           }),
           createdAt: new Date().toISOString(),
-        });
+        };
+        
+        console.log('Creating user profile in Firestore:', userProfile);
+        await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
         console.log('User profile created in Firestore');
       } catch (firestoreError) {
-        console.error('Error creating user profile in Firestore:', firestoreError);
+        console.error('Firestore Error:', {
+          code: firestoreError.code,
+          message: firestoreError.message,
+          fullError: firestoreError
+        });
         // Continue with navigation even if Firestore fails
       }
 
       // Set the user in the auth store
-      setUser(user);
+      setUser(userCredential.user);
       
       toast.success('تم إنشاء الحساب بنجاح');
       console.log('Navigating to dashboard...');
       navigate('/dashboard', { replace: true });
     } catch (error: any) {
-      console.error('Signup error:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
+      console.error('Signup Error:', {
+        code: error.code,
+        message: error.message,
+        fullError: error
+      });
       
       let errorMessage = 'حدث خطأ، يرجى المحاولة مرة أخرى';
 

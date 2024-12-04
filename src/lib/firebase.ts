@@ -14,7 +14,20 @@ if (!firebaseConfig.apiKey) {
   console.error('Firebase API Key is missing! Check your environment variables.');
 }
 
+console.log('Initializing Firebase with config:', {
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId
+});
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+console.log('Firebase initialized:', {
+  isAuthInitialized: auth !== null,
+  isDbInitialized: db !== null
+});
+
+export const auth = auth;
+export const db = db;
