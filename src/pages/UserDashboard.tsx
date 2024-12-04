@@ -1,14 +1,53 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, User, Heart, Settings } from 'lucide-react';
+import { Package, User, Heart, Settings, Users } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { Navigate } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
+interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  userType: 'customer' | 'seller';
+  createdAt: string;
+}
 
 const UserDashboard = () => {
   const { user } = useAuthStore();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          setProfile(userDoc.data() as UserProfile);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   if (!user) {
     return <Navigate to="/" replace />;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    );
   }
 
   const orders = [
@@ -18,8 +57,7 @@ const UserDashboard = () => {
       status: 'قيد التنفيذ',
       total: 799,
       items: ['سماعات آبل اللاسلكية']
-    },
-    // Add more orders as needed
+    }
   ];
 
   const groups = [
@@ -29,8 +67,7 @@ const UserDashboard = () => {
       progress: '8/15',
       timeLeft: '3 أيام',
       status: 'نشط'
-    },
-    // Add more groups as needed
+    }
   ];
 
   return (
@@ -50,8 +87,11 @@ const UserDashboard = () => {
                   <User className="w-8 h-8 text-emerald-600" />
                 </div>
                 <div>
-                  <h2 className="font-bold">{user.email}</h2>
-                  <p className="text-sm text-gray-500">عضو منذ 2024</p>
+                  <h2 className="font-bold">{profile?.name}</h2>
+                  <p className="text-sm text-gray-500">{profile?.email}</p>
+                  <p className="text-sm text-gray-500">
+                    {new Date(profile?.createdAt || '').toLocaleDateString('ar-SA')} عضو منذ
+                  </p>
                 </div>
               </div>
 
@@ -71,6 +111,31 @@ const UserDashboard = () => {
             transition={{ duration: 0.5 }}
             className="lg:col-span-3"
           >
+            {/* User Info */}
+            <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
+              <h3 className="text-xl font-bold mb-6">معلومات الحساب</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-600">الاسم</p>
+                    <p className="font-medium">{profile?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">رقم الجوال</p>
+                    <p className="font-medium">{profile?.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">البريد الإلكتروني</p>
+                    <p className="font-medium">{profile?.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">نوع الحساب</p>
+                    <p className="font-medium">{profile?.userType === 'customer' ? 'مشتري' : 'تاجر'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Orders */}
             <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
               <h3 className="text-xl font-bold mb-6">طلباتي</h3>
@@ -91,6 +156,9 @@ const UserDashboard = () => {
                     </div>
                   </div>
                 ))}
+                {orders.length === 0 && (
+                  <p className="text-center text-gray-500">لا يوجد طلبات حالياً</p>
+                )}
               </div>
             </div>
 
@@ -113,6 +181,9 @@ const UserDashboard = () => {
                     </div>
                   </div>
                 ))}
+                {groups.length === 0 && (
+                  <p className="text-center text-gray-500">لا يوجد مجموعات نشطة حالياً</p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -125,9 +196,7 @@ const UserDashboard = () => {
 const NavItem = ({ icon, text, active = false }: { icon: React.ReactNode; text: string; active?: boolean }) => (
   <button
     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-      active
-        ? 'bg-emerald-50 text-emerald-600'
-        : 'hover:bg-gray-50'
+      active ? 'bg-emerald-50 text-emerald-600' : 'hover:bg-gray-50'
     }`}
   >
     {icon}

@@ -9,6 +9,7 @@ import { auth, db } from '../lib/firebase';
 import { toast } from 'react-hot-toast';
 import { Store, User, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/useAuthStore';
 
 const userSchema = z.object({
   email: z.string().email('البريد الإلكتروني غير صالح'),
@@ -27,38 +28,101 @@ type FormData = z.infer<typeof userSchema>;
 const Signup = () => {
   const [userType, setUserType] = useState<'customer' | 'seller'>('customer');
   const navigate = useNavigate();
+  const setUser = useAuthStore(state => state.setUser);
 
-  const { register, handleSubmit, formState: { errors }, watch } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       userType: 'customer',
     },
   });
 
+  // Update userType in form when button is clicked
+  const handleUserTypeChange = (type: 'customer' | 'seller') => {
+    setUserType(type);
+    setValue('userType', type);
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
+      console.log('Form data:', data);
+      console.log('Firebase config:', {
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.slice(0, 5) + '...',
+        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      });
+      
+      if (!data.email || !data.password) {
+        console.error('Missing email or password');
+        toast.error('يرجى إدخال البريد الإلكتروني وكلمة المرور');
+        return;
+      }
+
+      console.log('Starting signup process...');
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      // Create user profile in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        userType: data.userType,
-        ...(data.userType === 'seller' && {
-          storeName: data.storeName,
-          storeAddress: data.storeAddress,
-          commercialRegister: data.commercialRegister,
-          verified: false,
-        }),
-        createdAt: new Date().toISOString(),
-      });
+      console.log('User created in Firebase Auth:', user.uid);
 
+      // Create user profile in Firestore
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          userType: data.userType,
+          ...(data.userType === 'seller' && {
+            storeName: data.storeName,
+            storeAddress: data.storeAddress,
+            commercialRegister: data.commercialRegister,
+            verified: false,
+          }),
+          createdAt: new Date().toISOString(),
+        });
+        console.log('User profile created in Firestore');
+      } catch (firestoreError) {
+        console.error('Error creating user profile in Firestore:', firestoreError);
+        // Continue with navigation even if Firestore fails
+      }
+
+      // Set the user in the auth store
+      setUser(user);
+      
       toast.success('تم إنشاء الحساب بنجاح');
-      navigate('/dashboard');
-    } catch (error) {
-      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
+      console.log('Navigating to dashboard...');
+      navigate('/dashboard', { replace: true });
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      let errorMessage = 'حدث خطأ، يرجى المحاولة مرة أخرى';
+
+      // Handle specific Firebase Auth errors
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'البريد الإلكتروني مستخدم بالفعل';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'البريد الإلكتروني غير صالح';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'تسجيل المستخدمين غير مفعل حالياً';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'كلمة المرور ضعيفة جداً';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'فشل الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'تم تجاوز عدد المحاولات المسموح بها، يرجى المحاولة لاحقاً';
+          break;
+        default:
+          errorMessage = `خطأ: ${error.message}`;
+      }
+
+      toast.error(errorMessage);
     }
   };
 
@@ -80,7 +144,8 @@ const Signup = () => {
 
             <div className="flex gap-4 mb-8">
               <button
-                onClick={() => setUserType('customer')}
+                type="button"
+                onClick={() => handleUserTypeChange('customer')}
                 className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-lg border-2 transition-colors ${
                   userType === 'customer'
                     ? 'border-emerald-600 bg-emerald-50 text-emerald-600'
@@ -91,7 +156,8 @@ const Signup = () => {
                 <span>مشتري</span>
               </button>
               <button
-                onClick={() => setUserType('seller')}
+                type="button"
+                onClick={() => handleUserTypeChange('seller')}
                 className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-lg border-2 transition-colors ${
                   userType === 'seller'
                     ? 'border-emerald-600 bg-emerald-50 text-emerald-600'

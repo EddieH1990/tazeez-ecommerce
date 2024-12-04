@@ -3,13 +3,24 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "tazeez-app.firebaseapp.com",
-  projectId: "tazeez-app",
-  storageBucket: "tazeez-app.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID
 };
+
+// Debug: Log Firebase config (without exposing full API key)
+console.log('Firebase Config Check:', {
+  apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.slice(0, 5)}...` : 'missing',
+  authDomain: firebaseConfig.authDomain || 'missing',
+  projectId: firebaseConfig.projectId || 'missing'
+});
+
+if (!firebaseConfig.apiKey) {
+  console.error('Firebase API Key is missing! Check your environment variables.');
+}
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
